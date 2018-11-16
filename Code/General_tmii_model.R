@@ -12,6 +12,20 @@
 #Berverton-Holt model
 #Anderson et al. 2009
 
+BH_func<-function(r1,M1,r2,M2,H1,H2,generations){
+  H1pop<-numeric(generations)
+  H2pop<-numeric(generations)
+  for(i in 1:generations){
+    
+    H1<-(r1*H1)/(1+(H1/M1))
+    H1pop[i]<-H1
+    
+    H2<-(r2*H2)/(1+(H2/M2)) 
+    H2pop[i]<-H2
+  }
+  
+}
+BH_func(10,10,10,10,0.1,0.1,100)
 
 #Set initial variables for MODEL 1 (Beverton-Holt model)
 M<-10 #
