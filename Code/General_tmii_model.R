@@ -12,7 +12,10 @@
 #Berverton-Holt model
 #Anderson et al. 2009
 
-BH_func<-function(r1,M1,r2,M2,H1,H2,generations){
+##################################################################################################
+
+#Beverton-Holt model:
+BH_func<-function(r1=10,M1=10,r2=10,M2=10,H1=0.1,H2=0.1,generations=10){
   H1pop<-numeric(generations)
   H2pop<-numeric(generations)
   for(i in 1:generations){
@@ -25,64 +28,57 @@ BH_func<-function(r1,M1,r2,M2,H1,H2,generations){
   }
   return(list(H1pop,H2pop))
 }
-BH_func(10,10,10,10,0.1,0.1,100)
+BH_func()
 
 
-############################################3
+################################################################################################
 
 
-#MODEL 3 - TMII model
+#TMII model:
 #Model with induced responses. Induced reponses of mammal affects insect population
 #Specific 'direct consumption' term added (insect accidently eaten by mammals)
 #Different proportions of the plant population have had previous herbivory by insects or mammals or both or neither
 #Insect population is affected by mammalian induced responses but the mammal is not affected by the insect
 #The mammal population is affected by its own induced responses
 
-#H1 - population density mammal
-#H2 - population density insect
-#I1 - level of mammal induced resposne
-#I2 - level of insect induced response
-#d1 - decay rate I1
-#d2 - decay rate I2
-#y1 - effect of mammal induced response on insect - depends on the level of I1
-#y2 - effect of insect induced response on insect (constant)
-#y3 - effect of mammal induced resposne on mammal (constant)
-#if y1, y2, y3 are negative - effect is positive, if they are postivie - effect is negative. 
 
-#alfa - max rate of elicitation of induced response
-#beta - self limitation of induced responses 
-
-
-#DC - Direct consumption effect (% of the insect population accidently eaten by the mammals)
-#Would be good if this could depend on the proportion of insect-mammals, = the more insects per mammal the higher DC
-#P - Proportion of plants damaged by mammal 
-#Q - Proportion of plant damaged by insects
-#PQ - Proportion of plants damaged by both insects and mammals
-
-
-
-
-
-tmii.func<-function(H1=0.1,H2=0.1,r1=1,r2=1,M1=10,M2=10,I1=0,I2=0,d1=1,d2=1,y2=0.1,y3=0.1,P=0.1,Q=0.1,PQ=0.1,DC=0.05,generations=50){
-  ro1<-0
-  ro2<-0
+tmii.func<-function(H1=0.1,#H1 - population density mammal
+                    H2=0.1,#H2 - population density insect
+                    r1=1, #growth rate H1
+                    r2=1, #growth rate H2
+                    M1=10, #variable connected to carrying capacity for H1
+                    M2=10, #variable connected to carrying capacity for H2
+                    I1=0,#I1 - level of mammal induced resposne
+                    I2=0,#I2 - level of insect induced response
+                    d1=1,#d1 - decay rate I1
+                    d2=1,#d2 - decay rate I2
+                    y2=0.1, #y2 - effect of insect induced response on insect 
+                    y3=0.1, #y3 - effect of mammal induced resposne on mammal 
+                    P=0.1,#P - Proportion of plants damaged by mammal 
+                    Q=0.1,#Q - Proportion of plant damaged by insects
+                    PQ=0.1,#PQ - Proportion of plants damaged by both insects and mammals
+                    DC=0.05, #DC - Direct consumption effect (% of the insect population accidently eaten by the mammals)
+                    alfa=10, #maximum per capita induced response elicitation rate
+                    beta=1, #per unit reduction in induced resposne elicitation due to plant self-inhibition
+                    generations=50){
+  ro1<-0 #ro1 - change in level of induced response I1 per time step, depends on I1 and H1
+  ro2<-0 #ro2 - change in level of induced response I2 per time step, depends on I2 and H2
   H1pop<-numeric(generations)
   H2pop<-numeric(generations)
   I1level<-numeric(generations)
   I2level<-numeric(generations)
-  alfa<-10
-  beta<-1
   
   for(i in 1:generations){
   
-    #Generate value for y1. y1 depends on the level of mammal induced response (I1) 
+    #Generate value for y1.
+    #y1 - effect of mammal induced response on insect - depends on the level of I1 
     if(I1<5|I1>15){
       y1<-0.2 #Per unit effect of induced resposne I1 (mammal induced) on insects (effect can be -,0,+ & weak/strong)
     }else{
       y1<-0.4
     }
     
-    #Generate value for change in I2
+    #Generate value for change in I2 (ro2)
     if(I2<(alfa/beta)){
       ro2<-(alfa-beta*I2)*H2
     }else{
@@ -93,7 +89,7 @@ tmii.func<-function(H1=0.1,H2=0.1,r1=1,r2=1,M1=10,M2=10,I1=0,I2=0,d1=1,d2=1,y2=0
     I2<-I2+ro2-d2*I2
     I2level[i]<-I2
     
-    #Generate value for change in I2
+    #Generate value for change in I1 (ro1)
     if(I1<(alfa/beta)){
       ro1<-(alfa-beta*I1)*H1
     }else{
@@ -121,7 +117,7 @@ tmii.func<-function(H1=0.1,H2=0.1,r1=1,r2=1,M1=10,M2=10,I1=0,I2=0,d1=1,d2=1,y2=0
   return(populations)
 }
 
-tmii.func(0.1,1,10,10,10,10,0,0,0.75,0.75,0.1,0.1,0.2,0.2,0.2,0.05,100)
+tmii.func()
 
 output.list<-list()
 for(i in seq(from=0.1,to=1,by=0.1)){
@@ -130,25 +126,16 @@ for(i in seq(from=0.1,to=1,by=0.1)){
 }
 output.list
 
-#Which parameters do I want to vary? 
-#d1 and d2 - if response has disappeard to the next year/generation?
-#r
-#M
-#y1, y2, y3
-#DC
-#P, Q, PQ
-#alfa and beta - removed
+
 
 
 #NEXT STEPS:
-#Make plot function
+#Make plotting function
 #Add selectivity/choice of herbivores 
 #Work out a way to make DC depend on insect:mammal proportion
-#Generate value for DC
-#DC<-1-(H2/(H1+H2)) #direct consumptive effect. Not good! 
 #Proportion of induced plants (P, Q, PQ) - could they depend on population sizes (H1,H2)?
 #Repeated mammalian herbivory 
-#y1 - the effect of mammal induced responses on insect - non-linear
+#y1 - the effect of mammal induced responses on insect - non-linear 
 
 #Model assumptions:
 #Forest/tree system - many herbivore generations per plant generation
