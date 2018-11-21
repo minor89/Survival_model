@@ -38,8 +38,8 @@ BH_func(10,10,10,10,0.1,0.1,100)
 #Insect population is affected by mammalian induced responses but the mammal is not affected by the insect
 #The mammal population is affected by its own induced responses
 
-#H1 - population size mammal
-#H2 - population size insect
+#H1 - population density mammal
+#H2 - population density insect
 #I1 - level of mammal induced resposne
 #I2 - level of insect induced response
 #d1 - decay rate I1
@@ -63,15 +63,18 @@ BH_func(10,10,10,10,0.1,0.1,100)
 
 
 
-tmii.func<-function(H1,H2,r1,r2,M1,M2,I1,I2,d1,d2,y2,y3,DC,P,Q,PQ,alfa,beta,generations){
+tmii.func<-function(H1=0.1,H2=0.1,r1=1,r2=1,M1=10,M2=10,I1=0,I2=0,d1=1,d2=1,y2=0.1,y3=0.1,P=0.1,Q=0.1,PQ=0.1,DC=0.05,generations=50){
   ro1<-0
   ro2<-0
   H1pop<-numeric(generations)
   H2pop<-numeric(generations)
   I1level<-numeric(generations)
   I2level<-numeric(generations)
+  alfa<-10
+  beta<-1
+  
   for(i in 1:generations){
-    
+  
     #Generate value for y1. y1 depends on the level of mammal induced response (I1) 
     if(I1<5|I1>15){
       y1<-0.2 #Per unit effect of induced resposne I1 (mammal induced) on insects (effect can be -,0,+ & weak/strong)
@@ -114,14 +117,42 @@ tmii.func<-function(H1,H2,r1,r2,M1,M2,I1,I2,d1,d2,y2,y3,DC,P,Q,PQ,alfa,beta,gene
     H2pop[i]<-H2
     
   } 
-  return(list(H1pop,H2pop,I1level,I2level))
+  populations<-list("H1pop"=H1pop,"H2pop"=H2pop,"I1level"=I1level,"I2level"=I2level)
+  return(populations)
 }
 
-tmii.func(0.1,0.1,10,10,10,10,0,0,0.75,0.75,0.1,0.1,0.05,0.2,0.2,0.2,10,1,100)
+tmii.func(0.1,1,10,10,10,10,0,0,0.75,0.75,0.1,0.1,0.2,0.2,0.2,0.05,100)
+
+output.list<-list()
+for(i in seq(from=0.1,to=1,by=0.1)){
+  temp<-tmii.func(r1=i)
+  output.list<-list(output.list,temp)
+}
+output.list
+
+#Which parameters do I want to vary? 
+#d1 and d2 - if response has disappeard to the next year/generation?
+#r
+#M
+#y1, y2, y3
+#DC
+#P, Q, PQ
+#alfa and beta - removed
+
 
 #NEXT STEPS:
 #Make plot function
-#
+#Add selectivity/choice of herbivores 
+#Work out a way to make DC depend on insect:mammal proportion
+#Generate value for DC
+#DC<-1-(H2/(H1+H2)) #direct consumptive effect. Not good! 
+#Proportion of induced plants (P, Q, PQ) - could they depend on population sizes (H1,H2)?
+#Repeated mammalian herbivory 
+#y1 - the effect of mammal induced responses on insect - non-linear
+
+#Model assumptions:
+#Forest/tree system - many herbivore generations per plant generation
+#Discrete reproduction 
 
 
 
