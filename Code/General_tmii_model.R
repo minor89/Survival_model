@@ -12,6 +12,8 @@
 #Berverton-Holt model
 #Anderson et al. 2009
 
+library(ggplot2)
+
 ##################################################################################################
 
 #Beverton-Holt model:
@@ -44,8 +46,8 @@ BH_func()
 
 tmii.func<-function(H1=0.1,#H1 - population density mammal
                     H2=0.1,#H2 - population density insect
-                    r1=1, #growth rate H1
-                    r2=1, #growth rate H2
+                    r1=10, #growth rate H1
+                    r2=10, #growth rate H2
                     M1=10, #variable connected to carrying capacity for H1
                     M2=10, #variable connected to carrying capacity for H2
                     I1=0,#I1 - level of mammal induced resposne
@@ -67,9 +69,13 @@ tmii.func<-function(H1=0.1,#H1 - population density mammal
   H2pop<-numeric(generations)
   I1level<-numeric(generations)
   I2level<-numeric(generations)
+  L1<-numeric(generations)
+  L2<-numeric(generations)
   
   for(i in 1:generations){
   
+    h1<-H1 #rember value of H1 from last generation (to be able to calc lambda later)
+    h2<-H2 #rember value of H2 from last generation
     #Generate value for y1.
     #y1 - effect of mammal induced response on insect - depends on the level of I1 
     if(I1<5|I1>15){
@@ -101,20 +107,27 @@ tmii.func<-function(H1=0.1,#H1 - population density mammal
     I1level[i]<-I1
     
     #Population size of insect (H2)
-    H2<-P*((r2*H2)/(1+((H2+y1*I1)/M2))-DC*H2)+
-    Q*((r2*H2)/(1+((H2+y2*I2)/M2)))+
-    PQ*((r2*H2)/(1+((H2+y1*I1+y2*I2)/M2))-DC*H2)+
-    (1-P-Q-PQ)*((r2*H2)/(1+((H2)/M2)))
+    H2<-P*(H2+((r2*H2)/(1+((H2+y1*I1)/M2))-DC*H2))+
+    Q*(H2+((r2*H2)/(1+((H2+y2*I2)/M2))))+
+    PQ*(H2+((r2*H2)/(1+((H2+y1*I1+y2*I2)/M2))-DC*H2))+
+    (1-P-Q-PQ)*(H2+((r2*H2)/(1+((H2)/M2))))
     
     
     H1<-(r1*H1)/(1+((H1+y3*I1)/M1))
     
+    lambda1<-H1/h1 #calculate lambda
+    lambda2<-H2/h2
+    
+    L1[i]<-lambda1
+    L2[i]<-lambda2
+    
     H1pop[i]<-H1
     H2pop[i]<-H2
     
+    
   } 
   # added a list of the three test parameters to show values...
-  populations<-list("params" = c("d2"=d2,"r1"=r1, "y2"=y2), "H1pop"=H1pop,"H2pop"=H2pop,"I1level"=I1level,"I2level"=I2level)
+  populations<-list("params" = c("d2"=d2,"P"=P, "y2"=y2), "H1pop"=H1pop,"H2pop"=H2pop,"I1level"=I1level,"I2level"=I2level,"L1"=L1,"L2"=L2)
   return(populations)
 }
 
@@ -130,15 +143,15 @@ output.list
 ## method 2: using apply to use all combinations of three parameters
 
 # first, set up some ranges for a few parameters
-y2 <- seq (from=0.05, to=0.15, by=0.01)
-d2 <- seq(from=0.8, to=1, by=0.1)
-r1 <- seq(from=0.8, to=1.1, by=0.1)
+y2 <- seq (from=-0.2, to=0.2, by=0.01)
+d2 <- seq(from=0.4, to=0.5, by=0.1)
+P <- seq(from=0.1, to=0.7, by=0.1)
 
 # make a data.frame with every combination of those parameters
-param.args <- expand.grid(y2 = y2, d2=d2, r1=r1)
+param.args <- expand.grid(y2 = y2, d2=d2, P=P)
 
 # using apply, iterate across every row and pass the row values as the arguments to the tmii.func
-output.list <- apply(param.args,1,function(params)tmii.func(y2=params[1],d2=params[2], r1=params[3]))
+output.list <- apply(param.args,1,function(params)tmii.func(y2=params[1],d2=params[2], P=params[3]))
 
 output.df <-data.frame((matrix(ncol = length(output.list), nrow = 50)))
 
@@ -154,6 +167,24 @@ ggplot2::ggplot (plot.df, aes(Step, value, fill=variable))+
   geom_line(alpha=0.2)+
   theme_minimal()
 
+
+##Same type of plot for L2 (lambda for H2)
+output.dfL <-data.frame((matrix(ncol = length(output.list), nrow = 50)))
+
+output.dfL <- data.frame("Step"=seq(from=1, to=50, by=1))
+for (i in 1:length(output.list)){
+  output.dfL[i+1] <- output.list[[i]]$L2
+  colnames(output.dfL)[i+1] <- paste0("run_",i)
+}
+
+plot.dfL <- reshape2::melt (output.dfL, id="Step")
+
+ggplot2::ggplot (plot.dfL, aes(Step, value, fill=variable))+
+  geom_line(alpha=0.2)+
+  theme_minimal()
+
+#Make the plot into a function
+#What we want to add in to the function is which 'output' variable we want to plot (H1, H2, I1 etc.)
 
 
 #NEXT STEPS:
