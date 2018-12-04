@@ -52,7 +52,7 @@ tmii.func<-function(H1=0.1,#H1 - population density mammal
                     M2=10, #variable connected to carrying capacity for H2
                     I1=0,#I1 - level of mammal induced resposne
                     I2=0,#I2 - level of insect induced response
-                    d1=1,#d1 - decay rate I1
+                    d1=0.75,#d1 - decay rate I1
                     d2=1,#d2 - decay rate I2
                     y2=0.1, #y2 - effect of insect induced response on insect 
                     y3=0.1, #y3 - effect of mammal induced resposne on mammal 
@@ -107,10 +107,10 @@ tmii.func<-function(H1=0.1,#H1 - population density mammal
     I1level[i]<-I1
     
     #Population size of insect (H2)
-    H2<-P*(H2+((r2*H2)/(1+((H2+y1*I1)/M2))-DC*H2))+
-    Q*(H2+((r2*H2)/(1+((H2+y2*I2)/M2))))+
-    PQ*(H2+((r2*H2)/(1+((H2+y1*I1+y2*I2)/M2))-DC*H2))+
-    (1-P-Q-PQ)*(H2+((r2*H2)/(1+((H2)/M2))))
+    H2<-P*(((r2*H2)/(1+((H2+y1*I1)/M2))-DC*H2))+
+    Q*(((r2*H2)/(1+((H2+y2*I2)/M2))))+
+    PQ*(((r2*H2)/(1+((H2+y1*I1+y2*I2)/M2))-DC*H2))+
+    (1-P-Q-PQ)*(((r2*H2)/(1+((H2)/M2))))
     
     
     H1<-(r1*H1)/(1+((H1+y3*I1)/M1))
@@ -143,8 +143,8 @@ output.list
 ## method 2: using apply to use all combinations of three parameters
 
 # first, set up some ranges for a few parameters
-y2 <- seq (from=-0.2, to=0.2, by=0.01)
-d2 <- seq(from=0.4, to=0.5, by=0.1)
+y2 <- seq (from=0.2, to=0.5, by=0.01)
+d2 <- seq(from=0.6, to=0.9, by=0.1)
 P <- seq(from=0.1, to=0.7, by=0.1)
 
 # make a data.frame with every combination of those parameters
