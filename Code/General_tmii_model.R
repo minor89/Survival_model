@@ -112,7 +112,7 @@ tmii.func<-function(H1=0.1,#H1 - population density mammal
     PQ*(((r2*H2)/(1+((H2+y1*I1+y2*I2)/M2))-DC*H2))+
     (1-P-Q-PQ)*(((r2*H2)/(1+((H2)/M2))))
     
-    
+    #population size of mammal 
     H1<-(r1*H1)/(1+((H1+y3*I1)/M1))
     
     lambda1<-H1/h1 #calculate lambda

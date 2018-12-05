@@ -4,6 +4,7 @@
 #Exploring how trait-mediated effects affects the dynamics#
 ###########################################################
 
+library(ggplot2)
 
 #ADD:
 #Direct consumptive efffect
