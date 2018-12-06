@@ -95,9 +95,9 @@ sawfly.model()
 
 
 # first, set up some ranges for a few parameters
-Btrees <- seq (from=0.7, to=0.7, by=0.1)
-DC <- seq(from=0.05, to=0.05, by=0.01)
-SlarvaeC<-seq(from=0.3,to=0.7,by=0.1)
+Btrees <- seq (from=0, to=1, by=0.1)
+DC <- seq(from=0.05, to=0.15, by=0.05)
+SlarvaeC<-seq(from=0.45,to=0.65,by=0.1)
 
 #difference between control and browsed survival from our experiment:
 #10 "procentenheter". (47% vs 37%)
@@ -133,6 +133,7 @@ plot.df$threshold <- 0
 plot.df$threshold[plot.df$value >= 200] <- 1
 
 param.args$threshold <-  (table (plot.df$variable, plot.df$threshold)[,2])
+#if there are no values in column 2 this does not work 
 param.args$threshold[param.args$threshold > 0] <- 1
 
 ggplot2::ggplot (plot.df, aes(Step, value,fill=variable))+
@@ -143,11 +144,34 @@ ggplot2::ggplot (plot.df, aes(Step, value,fill=variable))+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
 
 
-plot (param.args)
 
-output.df
+#ggplot(param.args,aes(Btrees,DC))+
+  #geom_point(alpha=0.6,colour=ifelse(param.args$threshold>0,"darkorange","lightblue"),size=4)+
+  #theme_minimal()+
+  #theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
 
 
+param.args
+
+
+
+#, then do the same with stringr, Rcpp, plyr, dlpyr, reshape2, digest,scales and finally ggplot2
+
+#Try to make a 3d plot
+
+#library(scatterplot3d)
+#scatterplot3d(param.args$Btrees,param.args$DC,param.args$SlarvaeC,color=ifelse(param.args$threshold>0,"darkorange","lightblue"),pch=16,grid=FALSE,box=FALSE)
+
+
+library(plotly)
+
+p <- plot_ly(param.args, x = ~Btrees, y = ~DC, z = ~SlarvaeC, color = ~threshold, colors = c('#BF382A', '#0C4B8E')) %>%
+  add_markers() %>%
+  layout(scene = list(xaxis = list(title = '% browsed trees'),
+                      yaxis = list(title = 'Direct consumtion (%)'),
+                      zaxis = list(title = 'Baseline larval survival (control)')))
+
+p
 #Control model: 
 
 control.model<-function(years=10,Slarvae=0.6){
@@ -178,7 +202,7 @@ control.model()
 
 
 
-Slarvae<-seq(from=0.3,to=0.7,by=0.1)
+Slarvae<-seq(from=0.45,to=0.65,by=0.1)
 
 #difference between control and browsed survival from our experiment:
 #10 "procentenheter". (47% vs 37%)
@@ -188,10 +212,12 @@ Slarvae<-seq(from=0.3,to=0.7,by=0.1)
 # make a data.frame with every combination of those parameters
 param.argsC <- expand.grid(Slarvae=Slarvae)
 
+
 # using apply, iterate across every row and pass the row values as the arguments to the tmii.func
 output.listC <- apply(param.argsC,1,function(params)control.model(Slarvae=params[1]))
 
-output.dfC <-data.frame((matrix(ncol = length(output.listC), nrow = years)))
+param.argsC$run <- paste0("run_", seq_along(param.argsC[,1])) 
+#output.df <-data.frame((matrix(ncol = length(output.list), nrow = years)))
 
 output.dfC <- data.frame("Step"=seq(from=1, to=years, by=1))
 for (i in 1:length(output.listC)){
@@ -200,7 +226,15 @@ for (i in 1:length(output.listC)){
 }
 
 
+
 plot.dfC <- reshape2::melt (output.dfC, id="Step")
+
+plot.dfC$threshold <- 0
+plot.dfC$threshold[plot.dfC$value >= 200] <- 1
+
+param.argsC$threshold <-  (table (plot.dfC$variable, plot.dfC$threshold)[,2])
+#if there are no values in column 2 this does not work 
+param.argsC$threshold[param.argsC$threshold > 0] <- 1
 
 ggplot2::ggplot (plot.dfC, aes(Step, value,fill=variable))+
   geom_line(alpha=0.2)+
@@ -209,11 +243,24 @@ ggplot2::ggplot (plot.dfC, aes(Step, value,fill=variable))+
   theme_minimal()+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
 
-output.dfC
 
 
+param.argsC
 
 
+ggplot(param.argsC,aes(Slarvae,c(1,1,1)))+
+  geom_point(alpha=0.6,colour=ifelse(param.argsC$threshold>0,"darkorange","lightblue"),size=4)+
+  theme_minimal()+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+
+
+pC <- plot_ly(param.argsC, x = ~Btrees, y = ~DC, z = ~SlarvaeC, color = ~threshold, colors = c('#BF382A', '#0C4B8E')) %>%
+  add_markers() %>%
+  layout(scene = list(xaxis = list(title = '% browsed trees'),
+                      yaxis = list(title = 'Direct consumtion (%)'),
+                      zaxis = list(title = 'Baseline larval survival (control)')))
+
+pC
 
 
 op.list<-control.model()
