@@ -20,16 +20,16 @@ library(ggplot2)
 years=10 #set number of years (same as in function)
 
 sawfly.model<-function(Btrees=0.5,
-                       Ctrees=(1-Btrees),
+                       FecundityB=85,
                        SlarvaeC=0.6,
                        years=10,
                        DC=0.05){
   N<-2 #Initial population density (cocoons per m2)
   #SlarvaeB<-0.42 #Survival of larvae on browsed trees
+  Ctrees<-(1-Btrees)
   sexratio<-0.50 #Survival of larvae on control trees
   Bfec<-0 #Proportion of sawflies that fed on browsed trees as larvae in previous generation - have fecundity from browsed trees
   Cfec<-1
-  FecundityB<-85 #Fecundity of females reared on browsed trees 
   FecundityC<-79 #Fecundity of females reared on control trees 
   Sbackground<-0.5 #Adult survival 
   Seggs<-0.9 #Egg survival
@@ -95,9 +95,9 @@ sawfly.model()
 
 
 # first, set up some ranges for a few parameters
-Btrees <- seq (from=0, to=1, by=0.1)
-DC <- seq(from=0.05, to=0.15, by=0.05)
-SlarvaeC<-seq(from=0.45,to=0.65,by=0.1)
+Btrees <- seq (from=0, to=1, by=0.05)
+DC <- seq(from=0, to=0.5, by=0.05)
+SlarvaeC<-seq(from=0.3,to=0.7,by=0.05)
 
 #difference between control and browsed survival from our experiment:
 #10 "procentenheter". (47% vs 37%)
@@ -155,23 +155,18 @@ param.args
 
 
 
-#, then do the same with stringr, Rcpp, plyr, dlpyr, reshape2, digest,scales and finally ggplot2
-
-#Try to make a 3d plot
-
-#library(scatterplot3d)
-#scatterplot3d(param.args$Btrees,param.args$DC,param.args$SlarvaeC,color=ifelse(param.args$threshold>0,"darkorange","lightblue"),pch=16,grid=FALSE,box=FALSE)
-
-
 library(plotly)
 
-p <- plot_ly(param.args, x = ~Btrees, y = ~DC, z = ~SlarvaeC, color = ~threshold, colors = c('#BF382A', '#0C4B8E')) %>%
+p <- plot_ly(param.args, x = ~Btrees, y = ~DC, z = ~SlarvaeC, color = ~threshold, colors = c( '#0C4B8E','#BF382A')) %>%
   add_markers() %>%
   layout(scene = list(xaxis = list(title = '% browsed trees'),
                       yaxis = list(title = 'Direct consumtion (%)'),
                       zaxis = list(title = 'Baseline larval survival (control)')))
 
 p
+
+
+
 #Control model: 
 
 control.model<-function(years=10,Slarvae=0.6){
@@ -202,7 +197,7 @@ control.model()
 
 
 
-Slarvae<-seq(from=0.45,to=0.65,by=0.1)
+Slarvae<-seq(from=0.3,to=0.7,by=0.05)
 
 #difference between control and browsed survival from our experiment:
 #10 "procentenheter". (47% vs 37%)
@@ -247,8 +242,9 @@ ggplot2::ggplot (plot.dfC, aes(Step, value,fill=variable))+
 
 param.argsC
 
+ys<-rep(1,length(Slarvae))
 
-ggplot(param.argsC,aes(Slarvae,c(1,1,1)))+
+ggplot(param.argsC,aes(Slarvae,ys))+
   geom_point(alpha=0.6,colour=ifelse(param.argsC$threshold>0,"darkorange","lightblue"),size=4)+
   theme_minimal()+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
