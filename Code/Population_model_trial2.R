@@ -107,10 +107,12 @@ SlarvaeC<-seq(from=0.3,to=0.7,by=0.1)
 # make a data.frame with every combination of those parameters
 param.args <- expand.grid(Btrees = Btrees, DC=DC, SlarvaeC=SlarvaeC)
 
+
 # using apply, iterate across every row and pass the row values as the arguments to the tmii.func
 output.list <- apply(param.args,1,function(params)sawfly.model(Btrees=params[1],DC=params[2],SlarvaeC=params[3]))
 
-output.df <-data.frame((matrix(ncol = length(output.list), nrow = years)))
+param.args$run <- paste0("run_", seq_along(param.args[,1])) 
+#output.df <-data.frame((matrix(ncol = length(output.list), nrow = years)))
 
 output.df <- data.frame("Step"=seq(from=1, to=years, by=1))
 for (i in 1:length(output.list)){
@@ -118,12 +120,20 @@ for (i in 1:length(output.list)){
   colnames(output.df)[i+1] <- paste0("run_",i)
 }
 
+
 #Tag values > 200 in the output df
 #output.df$value<-ifelse(output.df$run_1>200,"Yes","No")
 #But it only needs to be one value in the run. 
 #Should rather be added to a df or list of the parameter combinations 
 
+
 plot.df <- reshape2::melt (output.df, id="Step")
+
+plot.df$threshold <- 0
+plot.df$threshold[plot.df$value >= 200] <- 1
+
+param.args$threshold <-  (table (plot.df$variable, plot.df$threshold)[,2])
+param.args$threshold[param.args$threshold > 0] <- 1
 
 ggplot2::ggplot (plot.df, aes(Step, value,fill=variable))+
   geom_line(alpha=0.2)+
@@ -132,6 +142,8 @@ ggplot2::ggplot (plot.df, aes(Step, value,fill=variable))+
   theme_minimal()+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
 
+
+plot (param.args)
 
 output.df
 
