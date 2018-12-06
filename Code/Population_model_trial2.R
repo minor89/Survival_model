@@ -7,11 +7,12 @@
 library(ggplot2)
 
 #ADD:
-#Direct consumptive efffect
+#Direct consumptive efffect - ok 
 
 #Female choice
 
 #Possibly add something on browsing intesity (100% - have data for survival, and for fecundity although low sample size)
+#Would be interesting as surivival response seems to be linear whereas fecundity seem to be hump-shaped 
 
 #What values in the control model are needed for outbreaks - put these in and see if slarvaeB and DC can mitigate outbreaks under these conditions
 
@@ -22,17 +23,17 @@ sawfly.model<-function(Btrees=0.5,
                        Ctrees=(1-Btrees),
                        SlarvaeC=0.6,
                        years=10,
-                       SlarvaeB=0.6,
                        DC=0.05){
   N<-2 #Initial population density (cocoons per m2)
   #SlarvaeB<-0.42 #Survival of larvae on browsed trees
   sexratio<-0.50 #Survival of larvae on control trees
   Bfec<-0 #Proportion of sawflies that fed on browsed trees as larvae in previous generation - have fecundity from browsed trees
   Cfec<-1
-  FecundityB<-91 #Fecundity of females reared on browsed trees 
+  FecundityB<-85 #Fecundity of females reared on browsed trees 
   FecundityC<-79 #Fecundity of females reared on control trees 
   Sbackground<-0.5 #Adult survival 
-  Seggs<-0.9 #Egg survival 
+  Seggs<-0.9 #Egg survival
+  SlarvaeB=(SlarvaeC-0.1)
   
   #Make population value and lamda value matrices
   population<-numeric(years)#Nt+1 matrix
@@ -85,7 +86,7 @@ sawfly.model<-function(Btrees=0.5,
     population[i]<-N
     lambda[i]<-(population[i]/pop[i])
     }
-    output<-list("params" = c("Btrees"=Btrees,"DC"=DC,"SlarvaeB"=SlarvaeB),"population"=population,"population(t-1)"=pop,"lambda"=lambda)
+    output<-list("params" = c("Btrees"=Btrees,"DC"=DC,"SlarvaeC"=SlarvaeC),"population"=population,"population(t-1)"=pop,"lambda"=lambda)
     return(output)
 }
 
@@ -94,15 +95,20 @@ sawfly.model()
 
 
 # first, set up some ranges for a few parameters
-Btrees <- seq (from=0.5, to=0.5, by=0.1)
-DC <- seq(from=0.02, to=0.10, by=0.02)
-SlarvaeB<-seq(from=0.3,to=0.5,by=0.1)
+Btrees <- seq (from=0.7, to=0.7, by=0.1)
+DC <- seq(from=0.05, to=0.05, by=0.01)
+SlarvaeC<-seq(from=0.3,to=0.7,by=0.1)
+
+#difference between control and browsed survival from our experiment:
+#10 "procentenheter". (47% vs 37%)
+#What happens if we use the 'effect size' in the model SlarvaeB is 10% lower than SlarveC
+
 
 # make a data.frame with every combination of those parameters
-param.args <- expand.grid(Btrees = Btrees, DC=DC, SlarvaeB=SlarvaeB)
+param.args <- expand.grid(Btrees = Btrees, DC=DC, SlarvaeC=SlarvaeC)
 
 # using apply, iterate across every row and pass the row values as the arguments to the tmii.func
-output.list <- apply(param.args,1,function(params)sawfly.model(Btrees=params[1],DC=params[2],SlarvaeB=params[3]))
+output.list <- apply(param.args,1,function(params)sawfly.model(Btrees=params[1],DC=params[2],SlarvaeC=params[3]))
 
 output.df <-data.frame((matrix(ncol = length(output.list), nrow = years)))
 
@@ -111,6 +117,11 @@ for (i in 1:length(output.list)){
   output.df[i+1] <- output.list[[i]]$population
   colnames(output.df)[i+1] <- paste0("run_",i)
 }
+
+#Tag values > 200 in the output df
+#output.df$value<-ifelse(output.df$run_1>200,"Yes","No")
+#But it only needs to be one value in the run. 
+#Should rather be added to a df or list of the parameter combinations 
 
 plot.df <- reshape2::melt (output.df, id="Step")
 
@@ -125,12 +136,10 @@ ggplot2::ggplot (plot.df, aes(Step, value,fill=variable))+
 output.df
 
 
-
 #Control model: 
 
-control.model<-function(years=10){
+control.model<-function(years=10,Slarvae=0.6){
   NC=2
-  Slarvae=0.6
   Sbackground=0.5
   sexratio=0.5
   Fecundity=79
@@ -149,11 +158,51 @@ control.model<-function(years=10){
     populationC[i]<-NC
     lambdaC[i]<-(populationC[i]/popC[i])
   }
-  outputC<-list("populationC"=populationC,"populationC(t-1)"=popC,"lambdaC"=lambdaC)
+  outputC<-list("params" = c("Slarvae"=Slarvae),"populationC"=populationC,"populationC(t-1)"=popC,"lambdaC"=lambdaC)
   return(outputC)
 }
 
 control.model()
+
+
+
+Slarvae<-seq(from=0.3,to=0.7,by=0.1)
+
+#difference between control and browsed survival from our experiment:
+#10 "procentenheter". (47% vs 37%)
+#What happens if we use the 'effect size' in the model SlarvaeB is 10% lower than SlarveC
+
+
+# make a data.frame with every combination of those parameters
+param.argsC <- expand.grid(Slarvae=Slarvae)
+
+# using apply, iterate across every row and pass the row values as the arguments to the tmii.func
+output.listC <- apply(param.argsC,1,function(params)control.model(Slarvae=params[1]))
+
+output.dfC <-data.frame((matrix(ncol = length(output.listC), nrow = years)))
+
+output.dfC <- data.frame("Step"=seq(from=1, to=years, by=1))
+for (i in 1:length(output.listC)){
+  output.dfC[i+1] <- output.listC[[i]]$populationC
+  colnames(output.dfC)[i+1] <- paste0("run_",i)
+}
+
+
+plot.dfC <- reshape2::melt (output.dfC, id="Step")
+
+ggplot2::ggplot (plot.dfC, aes(Step, value,fill=variable))+
+  geom_line(alpha=0.2)+
+  coord_cartesian(ylim=c(0,500))+
+  geom_hline(yintercept=200,linetype=2,colour="lightblue",size=1.2)+
+  theme_minimal()+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+
+output.dfC
+
+
+
+
+
 
 op.list<-control.model()
 op.list
