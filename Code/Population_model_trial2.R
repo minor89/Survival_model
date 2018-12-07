@@ -97,7 +97,7 @@ sawfly.model()
 # first, set up some ranges for a few parameters
 Btrees <- seq (from=0, to=1, by=0.05)
 DC <- seq(from=0, to=0.5, by=0.05)
-SlarvaeC<-seq(from=0.3,to=0.7,by=0.05)
+SlarvaeC<-seq(from=0.55,to=0.6,by=0.01)
 
 #difference between control and browsed survival from our experiment:
 #10 "procentenheter". (47% vs 37%)
