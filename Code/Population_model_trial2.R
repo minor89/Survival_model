@@ -20,7 +20,6 @@ library(ggplot2)
 years=10 #set number of years (same as in function)
 
 sawfly.model<-function(Btrees=0.5,
-                       FecundityB=85,
                        SlarvaeC=0.6,
                        years=10,
                        DC=0.05){
@@ -30,10 +29,11 @@ sawfly.model<-function(Btrees=0.5,
   sexratio<-0.50 #Survival of larvae on control trees
   Bfec<-0 #Proportion of sawflies that fed on browsed trees as larvae in previous generation - have fecundity from browsed trees
   Cfec<-1
-  FecundityC<-79 #Fecundity of females reared on control trees 
+  FecundityC<-79 #Fecundity of females reared on control trees, make this rnorm(1,79,sd)
+  FecundityB<-FecundityC*1.09 #Fecundity of females reared on browsed trees (9% higher than controls)
   Sbackground<-0.5 #Adult survival 
   Seggs<-0.9 #Egg survival
-  SlarvaeB=(SlarvaeC-0.1)
+  SlarvaeB=SlarvaeC*0.8 #Surival of larvae on browsed trees
   
   #Make population value and lamda value matrices
   population<-numeric(years)#Nt+1 matrix
@@ -96,8 +96,8 @@ sawfly.model()
 
 # first, set up some ranges for a few parameters
 Btrees <- seq (from=0, to=1, by=0.05)
-DC <- seq(from=0, to=0.5, by=0.05)
-SlarvaeC<-seq(from=0.55,to=0.6,by=0.01)
+DC <- seq(from=0, to=0.2, by=0.05)
+SlarvaeC<-seq(from=0.45,to=0.65,by=0.05)
 
 #difference between control and browsed survival from our experiment:
 #10 "procentenheter". (47% vs 37%)
@@ -143,6 +143,11 @@ ggplot2::ggplot (plot.df, aes(Step, value,fill=variable))+
   theme_minimal()+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
 
+#Calculate the proportion of outbreak runs:
+#Should be in some sort of loop so that values for all parameter combinations can be stored.
+#Or should be devided according to parameter combinations !
+th1<-plot.df[plot.df$threshold==1,]
+outbreaks<-(length(th1$threshold))/length(plot.df$threshold)
 
 
 #ggplot(param.args,aes(Btrees,DC))+
@@ -161,7 +166,7 @@ p <- plot_ly(param.args, x = ~Btrees, y = ~DC, z = ~SlarvaeC, color = ~threshold
   add_markers() %>%
   layout(scene = list(xaxis = list(title = '% browsed trees'),
                       yaxis = list(title = 'Direct consumtion (%)'),
-                      zaxis = list(title = 'Baseline larval survival (control)')))
+                      zaxis = list(title = 'Survival control')))
 
 p
 
@@ -197,7 +202,7 @@ control.model()
 
 
 
-Slarvae<-seq(from=0.3,to=0.7,by=0.05)
+Slarvae<-seq(from=0.45,to=0.65,by=0.05)
 
 #difference between control and browsed survival from our experiment:
 #10 "procentenheter". (47% vs 37%)
