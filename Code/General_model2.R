@@ -22,13 +22,14 @@ tmii.func<-function(H1=0.1,#H1 - population density mammal
                     r2=1, #growth rate H2
                     K1=10, #variable connected to carrying capacity for H1
                     K2=100, #variable connected to carrying capacity for H2
+                    P=0.2,
+                    Q=0.2,
                     I1=0,#I1 - level of mammal induced resposne
                     I2=0,#I2 - level of insect induced response
                     d1=0.75,#d1 - decay rate I1
                     d2=0.75,#d2 - decay rate I2
                     y1=0.1, #y1 - effect of mammal induced response on insect
                     y2=0.1, #y2 - effect of insect induced response on insect 
-                    y3=0.1, #y3 - effect of mammal induced resposne on mammal 
                     DC=0.05, #DC - Direct consumption effect (% of the insect population accidently eaten by the mammals)
                     alfa=10, #maximum per capita induced response elicitation rate
                     beta=1, #per unit reduction in induced resposne elicitation due to plant self-inhibition
@@ -73,7 +74,9 @@ tmii.func<-function(H1=0.1,#H1 - population density mammal
     I1level[i]<-I1
     
     #Population size of insect (H2)
-    H2<-H2+(((r2*H2)*(1-((H2+y1*I1+y2*I2)/K2))-DC*H2))
+    H2<-H2+P*((((r2*H2)*(1-((H2+y1*I1)/K2))-DC*H2)))+
+      Q*((((r2*H2)*(1-((H2+y2*I2)/K2)))))+
+      (1-(P+Q))*((((r2*H2)*(1-((H2)/K2)))))
     
     
     #Population size of mammal (H1)
@@ -91,7 +94,7 @@ tmii.func<-function(H1=0.1,#H1 - population density mammal
     
   } 
   # added a list of the three test parameters to show values...
-  populations<-list("params" = c("d2"=d2, "y1"=y1, "DC"=DC), "H1pop"=H1pop,"H2pop"=H2pop,"I1level"=I1level,"I2level"=I2level,"L1"=L1,"L2"=L2,"h2p"=h2p)
+  populations<-list("params" = c("y1"=y1,"P"=P,"Q"=Q, "DC"=DC), "H1pop"=H1pop,"H2pop"=H2pop,"I1level"=I1level,"I2level"=I2level,"L1"=L1,"L2"=L2,"h2p"=h2p)
   return(populations)
 }
 
@@ -101,16 +104,17 @@ tmii.func<-function(H1=0.1,#H1 - population density mammal
 ## method 2: using apply to use all combinations of three parameters
 
 # first, set up some ranges for a few parameters
-y1 <- seq (from=0.1, to=0.6, by=0.1)
-d2 <- seq(from=0.75, to=0.75, by=0.25)
-DC <- seq(from=0.05, to=0.05,by=0.05)
+y1 <- seq (from=-0.8, to=0.8, by=0.8)
+P <- seq(from=0.5, to=0.5, by=0.1)
+Q <- seq(from=0,to=0,by=0.1)
+DC <- seq(from=0.15, to=0.15,by=0.05)
 
 
 # make a data.frame with every combination of those parameters
-param.args <- expand.grid(y1 = y1, d2=d2, DC=DC)
+param.args <- expand.grid(y1 = y1, P=P,Q=Q, DC=DC)
 
 # using apply, iterate across every row and pass the row values as the arguments to the tmii.func
-output.list <- apply(param.args,1,function(params)tmii.func(y1=params[1],d2=params[2],DC=params[3]))
+output.list <- apply(param.args,1,function(params)tmii.func(y1=params[1],P=params[2],Q=params[3],DC=params[4]))
 
 output.df <-data.frame((matrix(ncol = length(output.list), nrow = 50)))
 
@@ -127,12 +131,25 @@ ggplot2::ggplot (plot.df, aes(Step, value, fill=variable))+
   theme_minimal()
 
 
+#What type of plots do we want to make to explore this model? 
+
+library(plotly)
+
+p <- plot_ly(param.args, x = ~y1, y = ~d2, z = ~DC) %>%
+  add_markers() %>%
+  layout(scene = list(xaxis = list(title = 'y1'),
+                      yaxis = list(title = 'd2'),
+                      zaxis = list(title = 'DC')))
+
+p
+
+
 ##Same type of plot for L2 (lambda for H2) or I2 level (induced resposne of insect level)
 output.dfL <-data.frame((matrix(ncol = length(output.list), nrow = 50)))
 
 output.dfL <- data.frame("Step"=seq(from=1, to=50, by=1))
 for (i in 1:length(output.list)){
-  output.dfL[i+1] <- output.list[[i]]$L2
+  output.dfL[i+1] <- output.list[[i]]$I1level
   colnames(output.dfL)[i+1] <- paste0("run_",i)
 }
 
