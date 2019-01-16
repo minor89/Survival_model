@@ -34,6 +34,7 @@ sawfly.model<-function(Btrees=0.5,
   Sbackground<-0.5 #Adult survival 
   Seggs<-0.9 #Egg survival
   SlarvaeB=SlarvaeC*0.8 #Surival of larvae on browsed trees
+  #Try with SlarvaeB = rnorm(1, mean, sd) [and same for fecundity values etc.]
   
   #Make population value and lamda value matrices
   population<-numeric(years)#Nt+1 matrix

@@ -11,23 +11,23 @@
 library(ggplot2)
 
 #Make DC depend on H1 and H2
-DCt = 1-(45*(H1/(625+(H1^2)))) #We can probably use a function similar to this one 
+#DCt = 1-(45*(H1/(625+(H1^2)))) #We can probably use a function similar to this one 
 #Need to make a positive density-dependent function (the more insect and the more mammals the higher the DC 
 #DC e[0,1]
 
-
+generations<-50
 tmii.func<-function(H1=0.1,#H1 - population density mammal
                     H2=0.1,#H2 - population density insect
                     r1=1, #growth rate H1
                     r2=1, #growth rate H2
-                    K1=10, #variable connected to carrying capacity for H1
-                    K2=100, #variable connected to carrying capacity for H2
+                    K1=2, #Carrying capacity for H1
+                    K2=200, #Carrying capacity for H2
                     P=0.2,
                     Q=0.2,
                     I1=0,#I1 - level of mammal induced resposne
                     I2=0,#I2 - level of insect induced response
-                    d1=0.75,#d1 - decay rate I1
-                    d2=0.75,#d2 - decay rate I2
+                    d1=1,#d1 - decay rate I1
+                    d2=1,#d2 - decay rate I2
                     y1=0.1, #y1 - effect of mammal induced response on insect
                     y2=0.1, #y2 - effect of insect induced response on insect 
                     DC=0.05, #DC - Direct consumption effect (% of the insect population accidently eaten by the mammals)
@@ -74,13 +74,32 @@ tmii.func<-function(H1=0.1,#H1 - population density mammal
     I1level[i]<-I1
     
     #Population size of insect (H2)
-    H2<-H2+P*((((r2*H2)*(1-((H2+y1*I1)/K2))-DC*H2)))+
-      Q*((((r2*H2)*(1-((H2+y2*I2)/K2)))))+
-      (1-(P+Q))*((((r2*H2)*(1-((H2)/K2)))))
+    #Which plants the herbivores are on: 
+    if(H2<0){
+      H2<-0
+    }else{
+      H2P<-H2*P
+      H2Q<-H2*Q
+      H21<-H2*(1-(P+Q))
+      
+      #Growth of herbivores on P plants (direct and indirect effects)
+      H2P<-H2P-DC*H2P #first the eaten eggs disappear
+      H2P<-H2P+(r2*H2P)*(1-((H2P+(y1*I1))/K2)) #The individuals that are left are affected by induced responses 
+      
+      #Growth of herbivores on Q plants 
+      H2Q<-H2Q+(r2*H2Q)*(1-((H2Q+(y2)*I2)/K2))
+      
+      #Growth of herbivores on the rest
+      H21<-H21+(r2*H21)*(1-(H21/K2))
+      
+      H2<-H2P+H2Q+H21
+    }
     
+
     
     #Population size of mammal (H1)
     H1<-H1+(r1*H1)*(1-((H1)/K1))
+    
     
     lambda1<-H1/h1 #calculate lambda
     lambda2<-H2/h2
@@ -104,10 +123,10 @@ tmii.func<-function(H1=0.1,#H1 - population density mammal
 ## method 2: using apply to use all combinations of three parameters
 
 # first, set up some ranges for a few parameters
-y1 <- seq (from=-0.8, to=0.8, by=0.8)
-P <- seq(from=0.5, to=0.5, by=0.1)
+y1 <- seq (from=-1, to=1, by=1)
+P <- seq(from=1, to=1, by=0.1)
 Q <- seq(from=0,to=0,by=0.1)
-DC <- seq(from=0.15, to=0.15,by=0.05)
+DC <- seq(from=0, to=0,by=0.05)
 
 
 # make a data.frame with every combination of those parameters
@@ -116,9 +135,9 @@ param.args <- expand.grid(y1 = y1, P=P,Q=Q, DC=DC)
 # using apply, iterate across every row and pass the row values as the arguments to the tmii.func
 output.list <- apply(param.args,1,function(params)tmii.func(y1=params[1],P=params[2],Q=params[3],DC=params[4]))
 
-output.df <-data.frame((matrix(ncol = length(output.list), nrow = 50)))
+output.df <-data.frame((matrix(ncol = length(output.list), nrow = generations)))
 
-output.df <- data.frame("Step"=seq(from=1, to=50, by=1))
+output.df <- data.frame("Step"=seq(from=1, to=generations, by=1))
 for (i in 1:length(output.list)){
   output.df[i+1] <- output.list[[i]]$H2pop
   colnames(output.df)[i+1] <- paste0("run_",i)
@@ -145,9 +164,9 @@ p
 
 
 ##Same type of plot for L2 (lambda for H2) or I2 level (induced resposne of insect level)
-output.dfL <-data.frame((matrix(ncol = length(output.list), nrow = 50)))
+output.dfL <-data.frame((matrix(ncol = length(output.list), nrow = generations)))
 
-output.dfL <- data.frame("Step"=seq(from=1, to=50, by=1))
+output.dfL <- data.frame("Step"=seq(from=1, to=generations, by=1))
 for (i in 1:length(output.list)){
   output.dfL[i+1] <- output.list[[i]]$I1level
   colnames(output.dfL)[i+1] <- paste0("run_",i)

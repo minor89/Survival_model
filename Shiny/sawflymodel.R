@@ -13,6 +13,8 @@ sawfly.model<-function(Btrees=0.5,
   Sbackground<-0.5 #Adult survival 
   Seggs<-0.9 #Egg survival
   SlarvaeB=(SlarvaeC-0.1)
+  #Sawfly survival B - SurvivalC*0.9 or SurvivalC - 0.1 or something else? 
+  #Same question goes for fecundity 
   
   #Make population value and lamda value matrices
   population<-numeric(years)#Nt+1 matrix
