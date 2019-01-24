@@ -30,7 +30,7 @@ sawfly.model<-function(Btrees=0.5,
   Bfec<-0 #Proportion of sawflies that fed on browsed trees as larvae in previous generation - have fecundity from browsed trees
   Cfec<-1
   FecundityC<-79 #Fecundity of females reared on control trees, make this rnorm(1,79,sd)
-  FecundityB<-FecundityC*1.09 #Fecundity of females reared on browsed trees (9% higher than controls)
+  FecundityB<-FecundityC*1.09 #Fecundity of females reared on browsed trees (9% higher than controls), 15% if we use clipped
   Sbackground<-0.5 #Adult survival 
   Seggs<-0.9 #Egg survival
   SlarvaeB=SlarvaeC*0.8 #Surival of larvae on browsed trees
@@ -163,7 +163,7 @@ param.args
 
 library(plotly)
 
-p <- plot_ly(param.args, x = ~Btrees, y = ~DC, z = ~SlarvaeC, color = ~threshold, colors = c( '#0C4B8E','#BF382A')) %>%
+p <- plot_ly(param.args, x = ~Btrees, y = ~DC, z = ~SlarvaeC, color = ~threshold, colors = c("lightblue", "darkorange")) %>%
   add_markers() %>%
   layout(scene = list(xaxis = list(title = '% browsed trees'),
                       yaxis = list(title = 'Direct consumtion (%)'),
@@ -171,7 +171,7 @@ p <- plot_ly(param.args, x = ~Btrees, y = ~DC, z = ~SlarvaeC, color = ~threshold
 
 p
 
-
+#'#0C4B8E', ,'#BF382A'
 
 #Control model: 
 
