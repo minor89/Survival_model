@@ -22,14 +22,14 @@ years=10 #set number of years (same as in function)
 sawfly.model<-function(Btrees=0.5,
                        SlarvaeC=0.6,
                        years=10,
-                       DC=0.05){
+                       DC=0.05,
+                       FecundityC=79){
   N<-2 #Initial population density (cocoons per m2)
   #SlarvaeB<-0.42 #Survival of larvae on browsed trees
   Ctrees<-(1-Btrees)
   sexratio<-0.50 #Survival of larvae on control trees
   Bfec<-0 #Proportion of sawflies that fed on browsed trees as larvae in previous generation - have fecundity from browsed trees
   Cfec<-1
-  FecundityC<-79 #Fecundity of females reared on control trees, make this rnorm(1,79,sd)
   FecundityB<-FecundityC*1.09 #Fecundity of females reared on browsed trees (9% higher than controls), 15% if we use clipped
   Sbackground<-0.5 #Adult survival 
   Seggs<-0.9 #Egg survival
@@ -87,7 +87,7 @@ sawfly.model<-function(Btrees=0.5,
     population[i]<-N
     lambda[i]<-(population[i]/pop[i])
     }
-    output<-list("params" = c("Btrees"=Btrees,"DC"=DC,"SlarvaeC"=SlarvaeC),"population"=population,"population(t-1)"=pop,"lambda"=lambda)
+    output<-list("params" = c("Btrees"=Btrees,"DC"=DC,"SlarvaeC"=SlarvaeC,"FecundityC"=FecundityC),"population"=population,"population(t-1)"=pop,"lambda"=lambda)
     return(output)
 }
 
@@ -98,7 +98,8 @@ sawfly.model()
 # first, set up some ranges for a few parameters
 Btrees <- seq (from=0, to=1, by=0.05)
 DC <- seq(from=0, to=0.2, by=0.05)
-SlarvaeC<-seq(from=0.45,to=0.65,by=0.05)
+SlarvaeC<-seq(from=0.45,to=0.70,by=0.05)
+FecundityC<-seq(from=65, to=95, by=1)
 
 #difference between control and browsed survival from our experiment:
 #10 "procentenheter". (47% vs 37%)
@@ -106,11 +107,11 @@ SlarvaeC<-seq(from=0.45,to=0.65,by=0.05)
 
 
 # make a data.frame with every combination of those parameters
-param.args <- expand.grid(Btrees = Btrees, DC=DC, SlarvaeC=SlarvaeC)
+param.args <- expand.grid(Btrees = Btrees, DC=DC, SlarvaeC=SlarvaeC, FecundityC=FecundityC)
 
 
 # using apply, iterate across every row and pass the row values as the arguments to the tmii.func
-output.list <- apply(param.args,1,function(params)sawfly.model(Btrees=params[1],DC=params[2],SlarvaeC=params[3]))
+output.list <- apply(param.args,1,function(params)sawfly.model(Btrees=params[1],DC=params[2],SlarvaeC=params[3],FecundityC=params[4]))
 
 param.args$run <- paste0("run_", seq_along(param.args[,1])) 
 #output.df <-data.frame((matrix(ncol = length(output.list), nrow = years)))
@@ -137,6 +138,7 @@ param.args$threshold <-  (table (plot.df$variable, plot.df$threshold)[,2])
 #if there are no values in column 2 this does not work 
 param.args$threshold[param.args$threshold > 0] <- 1
 
+library(ggplot2)
 ggplot2::ggplot (plot.df, aes(Step, value,fill=variable))+
   geom_line(alpha=0.2)+
   coord_cartesian(ylim=c(0,500))+
@@ -163,23 +165,47 @@ param.args
 
 library(plotly)
 
-p <- plot_ly(param.args, x = ~Btrees, y = ~DC, z = ~SlarvaeC, color = ~threshold, colors = c("lightblue", "darkorange")) %>%
+p <- plot_ly(param.args, x = ~Btrees, y = ~FecundityC, z = ~SlarvaeC, color = ~threshold, colors = c("lightblue", "darkorange")) %>%
   add_markers() %>%
-  layout(scene = list(xaxis = list(title = '% browsed trees'),
-                      yaxis = list(title = 'Direct consumtion (%)'),
-                      zaxis = list(title = 'Survival control')))
+  hide_colorbar() %>%
+  layout(scene = list(xaxis = list(title = 'Btrees'),
+                      yaxis = list(title = 'Fec'),
+                      zaxis = list(title = 'Surv')))
 
 p
+
+ggplot(param.args,aes(FecundityC,SlarvaeC))+
+  geom_point(alpha=0.6,colour=ifelse(param.args$threshold>0,"darkorange","lightblue"),size=4,position="jitter")+
+  theme_minimal()+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+
+#Try to do a logistic regression for the model output
+OBdata<-param.args
+head(OBdata)
+
+library(car)
+library(lme4)
+logr.m<-glm(threshold~Btrees+FecundityC+SlarvaeC,family=binomial,data=OBdata)
+Anova(logr.m)
+summary(logr.m)
+
+plot(jitter(OBdata$threshold,0.2)~jitter(OBdata$Btrees,1))
+abline(lm(OBdata$threshold~OBdata$Btrees))
+plot(jitter(OBdata$threshold,0.2)~jitter(OBdata$FecundityC,1))
+abline(lm(OBdata$threshold~OBdata$FecundityC))
+plot(jitter(OBdata$threshold,0.2)~jitter(OBdata$SlarvaeC,1))
+abline(lm(OBdata$threshold~OBdata$SlarvaeC))
+plot(jitter(OBdata$threshold,0.2)~jitter(OBdata$DC,1))
+abline(lm(OBdata$threshold~OBdata$DC))
 
 #'#0C4B8E', ,'#BF382A'
 
 #Control model: 
 
-control.model<-function(years=10,Slarvae=0.6){
+control.model<-function(years=10,Slarvae=0.6,Fecundity=79){
   NC=2
   Sbackground=0.5
   sexratio=0.5
-  Fecundity=79
   Seggs=0.9
   populationC<-numeric(years)
   popC<-numeric(years)
@@ -195,7 +221,7 @@ control.model<-function(years=10,Slarvae=0.6){
     populationC[i]<-NC
     lambdaC[i]<-(populationC[i]/popC[i])
   }
-  outputC<-list("params" = c("Slarvae"=Slarvae),"populationC"=populationC,"populationC(t-1)"=popC,"lambdaC"=lambdaC)
+  outputC<-list("params" = c("Slarvae"=Slarvae,"Fecundity"=Fecundity),"populationC"=populationC,"populationC(t-1)"=popC,"lambdaC"=lambdaC)
   return(outputC)
 }
 
@@ -203,7 +229,9 @@ control.model()
 
 
 
-Slarvae<-seq(from=0.45,to=0.65,by=0.05)
+Slarvae<-seq(from=0.45,to=0.70,by=0.05)
+Fecundity<-seq(from=65,to=95,by=1)
+#limit is at 0.545
 
 #difference between control and browsed survival from our experiment:
 #10 "procentenheter". (47% vs 37%)
@@ -211,11 +239,11 @@ Slarvae<-seq(from=0.45,to=0.65,by=0.05)
 
 
 # make a data.frame with every combination of those parameters
-param.argsC <- expand.grid(Slarvae=Slarvae)
+param.argsC <- expand.grid(Slarvae=Slarvae,Fecundity=Fecundity)
 
 
 # using apply, iterate across every row and pass the row values as the arguments to the tmii.func
-output.listC <- apply(param.argsC,1,function(params)control.model(Slarvae=params[1]))
+output.listC <- apply(param.argsC,1,function(params)control.model(Slarvae=params[1],Fecundity=params[2]))
 
 param.argsC$run <- paste0("run_", seq_along(param.argsC[,1])) 
 #output.df <-data.frame((matrix(ncol = length(output.list), nrow = years)))
@@ -248,9 +276,14 @@ ggplot2::ggplot (plot.dfC, aes(Step, value,fill=variable))+
 
 param.argsC
 
-ys<-rep(1,length(Slarvae))
+ys<-rep(1,length(param.argsC$Slarvae))
 
 ggplot(param.argsC,aes(Slarvae,ys))+
+  geom_point(alpha=0.6,colour=ifelse(param.argsC$threshold>0,"darkorange","lightblue"),size=4)+
+  theme_minimal()+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+
+ggplot(param.argsC,aes(Fecundity,Slarvae))+
   geom_point(alpha=0.6,colour=ifelse(param.argsC$threshold>0,"darkorange","lightblue"),size=4)+
   theme_minimal()+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
