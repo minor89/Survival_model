@@ -23,7 +23,8 @@ sawfly.model<-function(Btrees=0.5,
                        SlarvaeC=0.6,
                        years=10,
                        DC=0.05,
-                       FecundityC=79){
+                       FecundityC=79,
+                       x=1){
   N<-2 #Initial population density (cocoons per m2)
   #SlarvaeB<-0.42 #Survival of larvae on browsed trees
   Ctrees<-(1-Btrees)
@@ -56,8 +57,14 @@ sawfly.model<-function(Btrees=0.5,
     NC.eggs<-N*Cfec*FecundityC*sexratio #Number of eggs laid by females with FecundityC
     
     N.eggs<-NB.eggs+NC.eggs #number of eggs
-    NB<-N.eggs*Btrees #Number of eggs on browsed trees
-    NC<-N.eggs*Ctrees #Number of eggs on control trees
+    
+    P<-Btrees*x #Proportion of females oviposit on browsed trees, if x=1 no preference. 
+    Q<-(1-P) #Proportion of females oviposit on control trees
+    NB<-N.eggs*P #Number of eggs on browsed trees
+    NC<-N.eggs*Q #Number of eggs on control trees
+    
+    #NB<-N.eggs*Btrees #Number of eggs on browsed trees
+    #NC<-N.eggs*Ctrees #Number of eggs on control trees
     
     NB<-NB - DC*NB #Number of eggs on browsed trees after direct consumptive effects
     NC<-NC #No DC effects on control trees
@@ -87,7 +94,7 @@ sawfly.model<-function(Btrees=0.5,
     population[i]<-N
     lambda[i]<-(population[i]/pop[i])
     }
-    output<-list("params" = c("Btrees"=Btrees,"DC"=DC,"SlarvaeC"=SlarvaeC,"FecundityC"=FecundityC),"population"=population,"population(t-1)"=pop,"lambda"=lambda)
+    output<-list("params" = c("Btrees"=Btrees,"DC"=DC,"SlarvaeC"=SlarvaeC,"FecundityC"=FecundityC,"x"=x),"population"=population,"population(t-1)"=pop,"lambda"=lambda)
     return(output)
 }
 
@@ -100,6 +107,7 @@ Btrees <- seq (from=0, to=1, by=0.05)
 DC <- seq(from=0, to=0.2, by=0.05)
 SlarvaeC<-seq(from=0.45,to=0.70,by=0.05)
 FecundityC<-seq(from=65, to=95, by=1)
+x<-seq(from=0.8, to=1.2,by=0.2)
 
 #difference between control and browsed survival from our experiment:
 #10 "procentenheter". (47% vs 37%)
@@ -107,11 +115,11 @@ FecundityC<-seq(from=65, to=95, by=1)
 
 
 # make a data.frame with every combination of those parameters
-param.args <- expand.grid(Btrees = Btrees, DC=DC, SlarvaeC=SlarvaeC, FecundityC=FecundityC)
+param.args <- expand.grid(Btrees = Btrees, DC=DC, SlarvaeC=SlarvaeC, FecundityC=FecundityC,x=x)
 
 
 # using apply, iterate across every row and pass the row values as the arguments to the tmii.func
-output.list <- apply(param.args,1,function(params)sawfly.model(Btrees=params[1],DC=params[2],SlarvaeC=params[3],FecundityC=params[4]))
+output.list <- apply(param.args,1,function(params)sawfly.model(Btrees=params[1],DC=params[2],SlarvaeC=params[3],FecundityC=params[4],x=params[5]))
 
 param.args$run <- paste0("run_", seq_along(param.args[,1])) 
 #output.df <-data.frame((matrix(ncol = length(output.list), nrow = years)))
@@ -165,12 +173,12 @@ param.args
 
 library(plotly)
 
-p <- plot_ly(param.args, x = ~Btrees, y = ~FecundityC, z = ~SlarvaeC, color = ~threshold, colors = c("lightblue", "darkorange")) %>%
+p <- plot_ly(param.args, x = ~SlarvaeC, y = ~FecundityC, z = ~Btrees, color = ~threshold, colors = c("lightblue", "darkorange")) %>%
   add_markers() %>%
   hide_colorbar() %>%
-  layout(scene = list(xaxis = list(title = 'Btrees'),
-                      yaxis = list(title = 'Fec'),
-                      zaxis = list(title = 'Surv')))
+  layout(scene = list(xaxis = list(title = 'S'),
+                      yaxis = list(title = 'F'),
+                      zaxis = list(title = 'B')))
 
 p
 
@@ -179,15 +187,48 @@ ggplot(param.args,aes(FecundityC,SlarvaeC))+
   theme_minimal()+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
 
+
+ggplot(param.args,aes(Btrees,SlarvaeC))+
+  geom_point(alpha=0.6,colour=ifelse(param.args$threshold>0,"darkorange","lightblue"),size=4,position="jitter")+
+  theme_minimal()+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+
+ggplot(param.args,aes(Btrees,FecundityC))+
+  geom_point(alpha=0.6,colour=ifelse(param.args$threshold>0,"darkorange","lightblue"),size=4,position="jitter")+
+  theme_minimal()+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+
+ggplot(param.args,aes(Btrees,x))+
+  geom_point(alpha=0.6,colour=ifelse(param.args$threshold>0,"darkorange","lightblue"),size=4,position="jitter")+
+  theme_minimal()+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+
+
 #Try to do a logistic regression for the model output
 OBdata<-param.args
 head(OBdata)
+
+
 
 library(car)
 library(lme4)
 logr.m<-glm(threshold~Btrees+FecundityC+SlarvaeC,family=binomial,data=OBdata)
 Anova(logr.m)
 summary(logr.m)
+
+
+
+#calculate, for each level of Btrees (i.e. 0, 0.05, ..., 1 (21 levels)), the proportion of outbreaks.
+#On each Btrees level there is one run for each fecxsurvival combination and the same runs are on all levels. 
+#By calc the prop of outbreaks we get a value for how Btrees affect oubreaks. 
+data.sum <- aggregate(OBdata[,"threshold"] ~ Btrees+DC+x, data=OBdata, FUN=sum)
+data.sum
+data.sum$prop<-data.sum$`OBdata[, "threshold"]`/186
+data.sum
+plot(data.sum$Btrees,data.sum$prop,bty="n",xlab="Proportion of browsed trees",ylab="Proportion of outbreaks")
+
+
+
 
 plot(jitter(OBdata$threshold,0.2)~jitter(OBdata$Btrees,1))
 abline(lm(OBdata$threshold~OBdata$Btrees))
@@ -197,6 +238,10 @@ plot(jitter(OBdata$threshold,0.2)~jitter(OBdata$SlarvaeC,1))
 abline(lm(OBdata$threshold~OBdata$SlarvaeC))
 plot(jitter(OBdata$threshold,0.2)~jitter(OBdata$DC,1))
 abline(lm(OBdata$threshold~OBdata$DC))
+plot(jitter(OBdata$threshold,0.2)~jitter(OBdata$x,1))
+abline(lm(OBdata$threshold~OBdata$x))
+
+
 
 #'#0C4B8E', ,'#BF382A'
 
