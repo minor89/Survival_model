@@ -23,15 +23,15 @@ sawfly.model<-function(Btrees=0.5,
                        SlarvaeC=0.6,
                        years=10,
                        DC=0.05,
-                       FecundityC=79){
+                       FecundityC=79,
+                       biasB=0.5){
   N<-2 #Initial population density (cocoons per m2)
   #SlarvaeB<-0.42 #Survival of larvae on browsed trees
   Ctrees<-(1-Btrees)
   sexratio<-0.50 #Survival of larvae on control trees
   Bfec<-0 #Proportion of sawflies that fed on browsed trees as larvae in previous generation - have fecundity from browsed trees
   Cfec<-1
-  biasC<-0.75
-  biasB<-0.25
+  biasC<-(1-biasB)
   FecundityB<-FecundityC*1.09 #Fecundity of females reared on browsed trees (9% higher than controls), 15% if we use clipped
   Sbackground<-0.5 #Adult survival 
   Seggs<-0.9 #Egg survival
@@ -166,9 +166,10 @@ sawfly.model<-function(Btrees=0.5,
     population[j]<-N
     lambda[j]<-(population[j]/pop[j])
     }
-    output<-list("params" = c("Btrees"=Btrees,"DC"=DC,"SlarvaeC"=SlarvaeC,"FecundityC"=FecundityC),"population"=population,"population(t-1)"=pop,"lambda"=lambda)
+    output<-list("params" = c("Btrees"=Btrees,"DC"=DC,"SlarvaeC"=SlarvaeC,"FecundityC"=FecundityC,"biasB"=biasB),"population"=population,"population(t-1)"=pop,"lambda"=lambda)
     return(output)
 }
+
 
 sawfly.model()
 
@@ -176,10 +177,10 @@ sawfly.model()
 
 # first, set up some ranges for a few parameters
 Btrees <- seq (from=0, to=1, by=0.05)
-DC <- seq(from=0, to=0, by=0.05)
+DC <- seq(from=0, to=0.2, by=0.1)
 SlarvaeC<-seq(from=0.45,to=0.70,by=0.05)
 FecundityC<-seq(from=65, to=95, by=1)
-
+biasB<-seq(from=0.25,to=0.75,by=0.25)
 
 
 
@@ -189,11 +190,11 @@ FecundityC<-seq(from=65, to=95, by=1)
 
 
 # make a data.frame with every combination of those parameters
-param.args <- expand.grid(Btrees = Btrees, DC=DC, SlarvaeC=SlarvaeC, FecundityC=FecundityC)
+param.args <- expand.grid(Btrees = Btrees, DC=DC, SlarvaeC=SlarvaeC, FecundityC=FecundityC,biasB=biasB)
 
 
 # using apply, iterate across every row and pass the row values as the arguments to the tmii.func
-output.list <- apply(param.args,1,function(params)sawfly.model(Btrees=params[1],DC=params[2],SlarvaeC=params[3],FecundityC=params[4]))
+output.list <- apply(param.args,1,function(params)sawfly.model(Btrees=params[1],DC=params[2],SlarvaeC=params[3],FecundityC=params[4],biasB=params[5]))
 
 param.args$run <- paste0("run_", seq_along(param.args[,1])) 
 #output.df <-data.frame((matrix(ncol = length(output.list), nrow = years)))
@@ -292,13 +293,21 @@ summary(logr.m)
 #calculate, for each level of Btrees (i.e. 0, 0.05, ..., 1 (21 levels)), the proportion of outbreaks.
 #On each Btrees level there is one run for each fecxsurvival combination and the same runs are on all levels. 
 #By calc the prop of outbreaks we get a value for how Btrees affect oubreaks. 
-data.sum <- aggregate(OBdata[,"threshold"] ~ Btrees+DC, data=OBdata, FUN=sum)
+data.sum <- aggregate(OBdata[,"threshold"] ~ Btrees+DC+biasB, data=OBdata, FUN=sum)
 data.sum
 data.sum$prop<-data.sum$`OBdata[, "threshold"]`/186
 data.sum
 plot(data.sum$Btrees,data.sum$prop,bty="n",xlab="Proportion of browsed trees",ylab="Proportion of outbreaks")
+lines(data.sum$Btrees,data.sum$prop)
 
 
+
+
+ggplot(data.sum,aes(Btrees,prop,colour=data.sum$biasB,group=interaction(data.sum$biasB,data.sum$DC)))+
+  geom_point(alpha=0.6,size=4)+
+  #geom_line(alpha=0.6,size=2)+
+  theme_minimal()+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),legend.position = "none")
 
 
 plot(jitter(OBdata$threshold,0.2)~jitter(OBdata$Btrees,1))
@@ -309,7 +318,8 @@ plot(jitter(OBdata$threshold,0.2)~jitter(OBdata$SlarvaeC,1))
 abline(lm(OBdata$threshold~OBdata$SlarvaeC))
 plot(jitter(OBdata$threshold,0.2)~jitter(OBdata$DC,1))
 abline(lm(OBdata$threshold~OBdata$DC))
-
+plot(jitter(OBdata$threshold,0.2)~jitter(OBdata$biasB,1))
+abline(lm(OBdata$threshold~OBdata$biasB))
 
 
 #'#0C4B8E', ,'#BF382A'
