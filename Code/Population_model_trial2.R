@@ -23,14 +23,15 @@ sawfly.model<-function(Btrees=0.5,
                        SlarvaeC=0.6,
                        years=10,
                        DC=0.05,
-                       FecundityC=79,
-                       x=1){
+                       FecundityC=79){
   N<-2 #Initial population density (cocoons per m2)
   #SlarvaeB<-0.42 #Survival of larvae on browsed trees
   Ctrees<-(1-Btrees)
   sexratio<-0.50 #Survival of larvae on control trees
   Bfec<-0 #Proportion of sawflies that fed on browsed trees as larvae in previous generation - have fecundity from browsed trees
   Cfec<-1
+  biasC<-0.75
+  biasB<-0.25
   FecundityB<-FecundityC*1.09 #Fecundity of females reared on browsed trees (9% higher than controls), 15% if we use clipped
   Sbackground<-0.5 #Adult survival 
   Seggs<-0.9 #Egg survival
@@ -43,8 +44,8 @@ sawfly.model<-function(Btrees=0.5,
   lambda<-numeric(years) #Lambda matrix (Lambda=Nt+1/Nt)
   
   
-  for(i in 1:years){
-    pop[i]<-N #number of pupae at time t
+  for(j in 1:years){
+    pop[j]<-N #number of pupae at time t
     s.pupae<-1-(45*(N/(625+(N^2)))) #density dependent survival of pupae (based on Larsson et al 2000, Hanski 1987)
     N<-N*s.pupae #Basically number of adults at time t
     #N<-N*s.adult #adult survival (from Olofsson or other study?)
@@ -52,22 +53,100 @@ sawfly.model<-function(Btrees=0.5,
     
     N<-N*Sbackground #number of adults after effects of background survival (mortality of adults)
     
+    #The female choice should go here I think
+    #N is nb of adults after background survival
+    NF<-N*sexratio #Number of females
+    #NFC<-NF*Cfec #Number of females with c-fecundity
+    #NFB<-NF*Bfec #Number of females with b-fecundity
     
-    NB.eggs<-N*Bfec*FecundityB*sexratio #Number of eggs laid by females with FecundityB
-    NC.eggs<-N*Cfec*FecundityC*sexratio #Number of eggs laid by females with FecundityC
+   
+    #Choice
     
-    N.eggs<-NB.eggs+NC.eggs #number of eggs
+    ##Loop 1: NFC
     
-    P<-Btrees*x #Proportion of females oviposit on browsed trees, if x=1 no preference. 
-    Q<-(1-P) #Proportion of females oviposit on control trees
-    NB<-N.eggs*P #Number of eggs on browsed trees
-    NC<-N.eggs*Q #Number of eggs on control trees
+    NFC<-1000*Cfec #Fake number of females with FecundityC (based on the proportion)
+    NFB<-1000*Bfec #Fake number of females with FecundityB (based on the proportion)
     
+    SC<-0 #Counting nb of females egg laying on control
+    SB<-0 #Counting nb of females egg laying on browsed
+    i<-1
+    while(i<=NFC){
+      y<-sample(c(0,1),1,prob=c(Ctrees,Btrees))
+      if(y==0){
+        oviC<-sample(c(1,0),1,prob=c(biasC,biasB))
+        if(oviC==1){
+          SC<-SC+1
+          i=i+1
+        }else{
+          next
+        }
+      }
+      if(y==1){
+        oviB<-sample(c(1,0),1,prob=c(biasB,biasC))
+        if(oviB==1){
+          SB<-SB+1
+          i=i+1
+        }else{
+          next
+        }
+      }
+    }
+    
+    
+    ##Loop 2: NFB
+    
+    SSC<-0 #Counting nb of females egg laying on control
+    SSB<-0 #Counting nb of females egg laying on browsed
+    i<-1
+    while(i<=NFB){
+      y<-sample(c(0,1),1,prob=c(Ctrees,Btrees))
+      if(y==0){
+        oviC<-sample(c(1,0),1,prob=c(biasC,biasB))
+        if(oviC==1){
+          SSC<-SSC+1
+          i=i+1
+        }else{
+          next
+        }
+      }
+      if(y==1){
+        oviB<-sample(c(1,0),1,prob=c(biasB,biasC))
+        if(oviB==1){
+          SSB<-SSB+1
+          i=i+1
+        }else{
+          next
+        }
+      }
+    }
+    
+    #proportions of females that have different fecundities and will oviposit on different types of trees:
+    P1<-SC/1000 #Proportion of females with fecundityC laying on Ctrees
+    P2<-SB/1000 #Proportion of females with fecundityC laying on Btrees
+    P3<-SSC/1000 #Proportion of females with fecundityB laying on Ctrees
+    P4<-SSB/1000 #Proportion of females with fecundityB laying on Btrees
+    
+    
+    #Number of females on the differnt trees with the different fecundities:
+    NCC.fem<-P1*NF #number of females egg laying on control trees
+    NCB.fem<-P2*NF #number of females egg laying on briowsed trees
+    NBC.fem<-P3*NF #number of females egg laying on control trees
+    NBB.fem<-P4*NF #number of females egg laying on briowsed trees
+    
+    NC.eggs<-NCC.fem*FecundityC + NBC.fem*FecundityB #all eggs on C trees
+    NB.eggs<-NCB.fem*FecundityC + NBB.fem*FecundityB #all eggs on B trees
+    
+    NC<-NC.eggs
+    NB<-NB.eggs - DC*NB.eggs #Direct consumptive effects 
+    
+    #Old way (w/o the choice module):
+    #NB.eggs<-N*Bfec*FecundityB*sexratio #Number of eggs laid by females with FecundityB
+    #NC.eggs<-N*Cfec*FecundityC*sexratio #Number of eggs laid by females with FecundityC
+    #N.eggs<-NB.eggs+NC.eggs #number of eggs
     #NB<-N.eggs*Btrees #Number of eggs on browsed trees
     #NC<-N.eggs*Ctrees #Number of eggs on control trees
-    
-    NB<-NB - DC*NB #Number of eggs on browsed trees after direct consumptive effects
-    NC<-NC #No DC effects on control trees
+    #NB<-NB - DC*NB #Number of eggs on browsed trees after direct consumptive effects
+    #NC<-NC #No DC effects on control trees
     
     NB.larvae<-NB*Seggs #other survival effects on eggs (independent of browsing) --> nb of larvae
     NC.larvae<-NC*Seggs #other survival effects on eggs (independent of browsing) --> nb of larvae
@@ -78,23 +157,16 @@ sawfly.model<-function(Btrees=0.5,
     
     N<-NB+NC #Number of pupae at t+1 
     
-    
-    #NBB<-N*Bfec*Btrees*Sbackground*sexratio*SlarvaeB*FecundityB-N*DC #on browsed trees with browsed fecundity, [add direct consumption]
-    #NCB<-N*Bfec*Ctrees*Sbackground*sexratio*SlarvaeC*FecundityB #on control trees with browsed fecundity
-    #NBC<-N*Cfec*Btrees*Sbackground*sexratio*SlarvaeB*FecundityC-N*DC #on browsed trees with control fecundity, [add direct consumption]
-    #NCC<-N*Cfec*Ctrees*Sbackground*sexratio*SlarvaeC*FecundityC #on control trees with control fecundity 
-    
-    #N<-NBB+NCB+NBC+NCC #sum to obtain total population size
-    #These needs to be fixed now (think that it's ok now):
+
     Bfec<-(NB)/N #the prop of individuals that have been reared on browsed trees 
     Cfec<-(NC)/N #the prop of individuals that have been reared on control trees 
     #Prop of induced trees (random), this can be varied to only be within a certain range or have a set value
     #Btrees<-runif(1,0,1) #Prop of trees getting browsed during winter, could be random or fixed 
     #Ctrees<-(1-Btrees)
-    population[i]<-N
-    lambda[i]<-(population[i]/pop[i])
+    population[j]<-N
+    lambda[j]<-(population[j]/pop[j])
     }
-    output<-list("params" = c("Btrees"=Btrees,"DC"=DC,"SlarvaeC"=SlarvaeC,"FecundityC"=FecundityC,"x"=x),"population"=population,"population(t-1)"=pop,"lambda"=lambda)
+    output<-list("params" = c("Btrees"=Btrees,"DC"=DC,"SlarvaeC"=SlarvaeC,"FecundityC"=FecundityC),"population"=population,"population(t-1)"=pop,"lambda"=lambda)
     return(output)
 }
 
@@ -104,10 +176,12 @@ sawfly.model()
 
 # first, set up some ranges for a few parameters
 Btrees <- seq (from=0, to=1, by=0.05)
-DC <- seq(from=0, to=0.2, by=0.05)
+DC <- seq(from=0, to=0, by=0.05)
 SlarvaeC<-seq(from=0.45,to=0.70,by=0.05)
 FecundityC<-seq(from=65, to=95, by=1)
-x<-seq(from=0.8, to=1.2,by=0.2)
+
+
+
 
 #difference between control and browsed survival from our experiment:
 #10 "procentenheter". (47% vs 37%)
@@ -115,11 +189,11 @@ x<-seq(from=0.8, to=1.2,by=0.2)
 
 
 # make a data.frame with every combination of those parameters
-param.args <- expand.grid(Btrees = Btrees, DC=DC, SlarvaeC=SlarvaeC, FecundityC=FecundityC,x=x)
+param.args <- expand.grid(Btrees = Btrees, DC=DC, SlarvaeC=SlarvaeC, FecundityC=FecundityC)
 
 
 # using apply, iterate across every row and pass the row values as the arguments to the tmii.func
-output.list <- apply(param.args,1,function(params)sawfly.model(Btrees=params[1],DC=params[2],SlarvaeC=params[3],FecundityC=params[4],x=params[5]))
+output.list <- apply(param.args,1,function(params)sawfly.model(Btrees=params[1],DC=params[2],SlarvaeC=params[3],FecundityC=params[4]))
 
 param.args$run <- paste0("run_", seq_along(param.args[,1])) 
 #output.df <-data.frame((matrix(ncol = length(output.list), nrow = years)))
@@ -145,6 +219,7 @@ plot.df$threshold[plot.df$value >= 200] <- 1
 param.args$threshold <-  (table (plot.df$variable, plot.df$threshold)[,2])
 #if there are no values in column 2 this does not work 
 param.args$threshold[param.args$threshold > 0] <- 1
+
 
 library(ggplot2)
 ggplot2::ggplot (plot.df, aes(Step, value,fill=variable))+
@@ -198,10 +273,6 @@ ggplot(param.args,aes(Btrees,FecundityC))+
   theme_minimal()+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
 
-ggplot(param.args,aes(Btrees,x))+
-  geom_point(alpha=0.6,colour=ifelse(param.args$threshold>0,"darkorange","lightblue"),size=4,position="jitter")+
-  theme_minimal()+
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
 
 
 #Try to do a logistic regression for the model output
@@ -221,7 +292,7 @@ summary(logr.m)
 #calculate, for each level of Btrees (i.e. 0, 0.05, ..., 1 (21 levels)), the proportion of outbreaks.
 #On each Btrees level there is one run for each fecxsurvival combination and the same runs are on all levels. 
 #By calc the prop of outbreaks we get a value for how Btrees affect oubreaks. 
-data.sum <- aggregate(OBdata[,"threshold"] ~ Btrees+DC+x, data=OBdata, FUN=sum)
+data.sum <- aggregate(OBdata[,"threshold"] ~ Btrees+DC, data=OBdata, FUN=sum)
 data.sum
 data.sum$prop<-data.sum$`OBdata[, "threshold"]`/186
 data.sum
@@ -238,8 +309,6 @@ plot(jitter(OBdata$threshold,0.2)~jitter(OBdata$SlarvaeC,1))
 abline(lm(OBdata$threshold~OBdata$SlarvaeC))
 plot(jitter(OBdata$threshold,0.2)~jitter(OBdata$DC,1))
 abline(lm(OBdata$threshold~OBdata$DC))
-plot(jitter(OBdata$threshold,0.2)~jitter(OBdata$x,1))
-abline(lm(OBdata$threshold~OBdata$x))
 
 
 
